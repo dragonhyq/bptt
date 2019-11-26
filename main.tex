@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+
+\title{Back Propagation Through Time}
+\author{Yongqiang Huang}
+\date{November 2019}
+
+\begin{document}
+
+\maketitle
+
+First we look at the over-simplified scalar version where all variables are one-dimensional. Let our network be a binary classifier:
+\begin{align}
+    s_t &= tanh(Ux_t + Ws_{t-1}) \label{eq-recurrent} \\
+    \hat{y}_t &= sigm(Vs_t) \\
+    E_t &= -y_t\log \hat{y}_t
+\end{align}
+Assume $t \geq 1$ and $s_0$ is given, that is $s_0$ does not depend on any other variable. We want to compute $\frac{\partial E_t}{\partial V}$, $\frac{\partial E_t}{\partial W}$, and  $\frac{\partial E_t}{\partial U}$. First, let us compute $\frac{\partial E_t}{\partial V}$. 
+\begin{equation}
+    \frac{\partial E_t}{\partial V} = \frac{\partial E_t}{\partial \hat{y}_t}\frac{\partial \hat{y}_t}{\partial V}
+\end{equation}
+Then, we compute $\frac{\partial E_t}{\partial W}$:
+\begin{equation}
+    \frac{\partial E_t}{\partial W} = \frac{\partial E_t}{\partial \hat{y}_t}\frac{\partial \hat{y}_t}{\partial s_t}\frac{\partial s_t}{\partial W}
+\end{equation}
+Notice from Eq. \eqref{eq-recurrent} that $s_t$ is a function of both $W$ and $s_{t-1}$. Before going forward, we need to review the concept of total derivative, which says the following. If function $z = f(u, v)$ where $u = u(x)$, $v = v(x)$, then the total derivative of $z$ with respect to $x$ is
+\begin{equation} \label{eq-total_derivative}
+    \frac{dz}{dx} = \frac{\partial z}{\partial u}\frac{du}{dx} + \frac{\partial z}{\partial v}\frac{dv}{dx}
+\end{equation}
+Notice the definition does not confine the exact form of $f(\cdot)$, it does not have to be addition, nor does it have to be multiplication, or specifically anything else. As long as it involves different functions of $x$, the functions would contribute to the total derivative linearly with the same weight 1. Okay, back to what we were saying. $s_t = tanh(Ux_t + Ws_{t-1})$, here $W$ is a function of $W$ itself, and $s_{t-1}$ is a function of $W$, so using the definition of the total derivative in Eq. \eqref{eq-total_derivative}, we have 
+\begin{equation}
+    \frac{\partial s_t}{\partial W} = \frac{\partial s_t}{\partial W}\frac{\partial W}{\partial W}  + \frac{\partial s_t}{\partial s_{t-1}}\frac{\partial s_{t-1}}{\partial W}   
+\end{equation}
+Hence the derivative is recursive, and it stops at $s_1$ which depends on $s_0$. For example, $\frac{\partial s_3}{\partial W}$ expands to 
+\begin{align}
+    \frac{\partial s_3}{\partial W} &= \frac{\partial s_3}{\partial W} + \frac{\partial s_3}{\partial s_2}\frac{\partial s_2}{\partial W} + \frac{\partial s_3}{\partial s_2}\frac{\partial s_2}{\partial s_1}\frac{\partial s_1}{\partial W}\\
+    &= \frac{\partial s_3}{\partial s_3}\frac{\partial s_3}{\partial W} + \frac{\partial s_3}{\partial s_2}\frac{\partial s_2}{\partial W} + \frac{\partial s_3}{\partial s_1}\frac{\partial s_1}{\partial W} \\
+    &= \sum_{1\leq k \leq 3}\frac{\partial s_3}{\partial s_k}\frac{\partial s_k}{\partial W}
+\end{align}
+The expansion shows that the $\frac{\partial s_3}{\partial W}$ goes through $s_3$, $s_2$, and $s_1$, in every $s$ for which $W$ is an input. We can generalize the formula of $s_3$ to $s_t$:
+\begin{align}
+    \frac{\partial s_t}{\partial W} &= \sum_{1\leq k \leq t}\frac{\partial s_t}{\partial s_k}\frac{\partial s_k}{\partial W} \label{eq-dw_sum1}\\
+    &= \frac{\partial s_t}{\partial s_t}\frac{\partial s_t}{\partial W} + \frac{\partial s_t}{\partial s_{t-1}}\frac{\partial s_{t-1}}{\partial W} + \frac{\partial s_t}{\partial s_{t-2}}\frac{\partial s_{t-2}}{\partial W} + \dots +  \frac{\partial s_t}{\partial s_1}\frac{\partial s_1}{\partial W}
+\end{align}
+Let's take a closer look at each individual term $\frac{\partial s_t}{\partial s_k}\frac{\partial s_k}{\partial W}$. If we expand it, we have
+\begin{align}
+    \frac{\partial s_t}{\partial s_k}\frac{\partial s_k}{\partial W} &= \frac{\partial s_t}{\partial s_{t-1}}\frac{\partial s_{t-1}}{\partial s_{t-2}}\frac{\partial s_{t-2}}{\partial s_{t-3}}\cdots\frac{\partial s_{k+1}}{\partial s_k}\frac{\partial s_k}{\partial W} \\
+    &= W\cdot W\cdot W\cdots \frac{\partial s_k}{\partial W} \\
+    &= W^{t - k}\frac{\partial s_k}{\partial W}
+\end{align}
+Thus we can rewrite Eq. \eqref{eq-dw_sum1} as 
+\begin{equation}
+    \frac{\partial s_t}{\partial W} = \sum_{1\leq k \leq t}W^{t - k}\frac{\partial s_k}{\partial W}    
+\end{equation}
+Lastly, we compute $\frac{\partial E_t}{\partial U}$. $U$ is an input to $s_t$, which means we will treat $U$ similarly to the way we treat $W$:
+\begin{equation}
+    \frac{\partial E_t}{\partial U} = \frac{\partial E_t}{\partial \hat{y}_t}\frac{\partial \hat{y}_t}{\partial s_t}\frac{\partial s_t}{\partial U}
+\end{equation}
+where 
+\begin{equation}
+    \frac{\partial s_t}{\partial U} = \sum_{1\leq k \leq t}W^{t - k}\frac{\partial s_k}{\partial U}    
+\end{equation}
+\end{document}
