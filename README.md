@@ -1,0 +1,1 @@
+My own description of back propagation through time
