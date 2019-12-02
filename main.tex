@@ -3,9 +3,9 @@
 \usepackage{amsmath}
 
 
-\title{Back Propagation Through Time}
+\title{Back Propagation Through Time For Vanilla Recurrent Neural Network}
 \author{Yongqiang Huang}
-\date{November 2019}
+\date{December 2, 2019}
 
 \begin{document}
 
@@ -232,4 +232,142 @@ The final gradient with respect to the weights are:
 \end{align}
 
 \section{Vector form, multiple data points}
+For multiple data points, we would like to slightly change the formulation again. Specifically, we use $X$ to represent the data, which has $N$ points, and each has $D$ dimensions. Thus, the dimensions of $X$ is $N * D$. The network is written as follows:
+\begin{align}
+    Z(t) &= X(t)\cdot U + S(t-1)\cdot W \\
+    S(t) &= \tanh(Z(t)) \\
+    G(t) &= S(t)\cdot V \\
+    \hat{Y}(t) &= \text{softmax}(G(t)) \\
+    L(t) &= -\sum_{i=1}^N\sum_{j=1}^CY(t)_{i, j}\log(\hat{Y}_{i, j})
+\end{align}
+and the dimensions of the variables are:
+\begin{align}
+    X(t) &: N \times D \\
+    Z(t), S(t) &: N \times M \\
+    G(t), \hat{Y}(t), Y(t) &: N \times C \\
+    U &: D \times M \\
+    W &: M \times M \\
+    V &: M \times C
+\end{align}
+We will follow the order of single-data-point vector form. First we compute $\frac{\partial L(t)}{\partial \hat{Y}(t)}$ which has dimension $N \times C$. Assuming $\log() = \text{ln}()$:
+\begin{equation}
+    \frac{\partial L(t)}{\hat{Y}(t)_{i, j}} = -\frac{Y(t)_{i, j}}{\hat{Y}(t)_{i, j}}
+\end{equation}
+Then
+\begin{equation}
+    \frac{\partial \hat{Y}(t)_{m, n}}{\partial G(t)_{i, j}} = \mathbf{1}(m = i)\hat{Y}(t)_{m, n}(\mathbf{1}(n=j) - \hat{Y}(t)_{m, j}) 
+\end{equation}
+and
+\begin{align}
+    \frac{\partial L(t)}{\partial G(t)_{i, j}} 
+    &= \sum_{m=1}^N\sum_{n=1}^C\frac{\partial L(t)}{\hat{Y}(t)_{m, n}}\frac{\partial \hat{Y}(t)_{m, n}}{\partial G(t)_{i, j}} \\
+    &= -\sum_{m=1}^N\sum_{n=1}^C\frac{Y(t)_{m, n}}{\hat{Y}(t)_{m, n}}\mathbf{1}(m = i)\hat{Y}(t)_{m, n}(\mathbf{1}(n=j) - \hat{Y}(t)_{m, j}) \\
+    &= -\sum_{m=1}^N\sum_{n=1}^CY(t)_{m, n}\mathbf{1}(m = i)(\mathbf{1}(n=j) - \hat{Y}(t)_{m, j}) \\
+    &= -\sum_{n=1}^CY(t)_{i, n}(\mathbf{1}(n=j) - \hat{Y}(t)_{i, j}) \\
+    &= \hat{Y}(t)_{i, j} - Y(t)_{i, j}
+\end{align}
+Thus 
+\begin{equation}
+    \frac{\partial L(t)}{\partial G(t)} = \hat{Y}(t) - Y(t) 
+\end{equation}
+The gradient with respect to $V$ is computed by
+\begin{equation}
+    \frac{\partial L(t)}{\partial V_{i, j}} = \sum_{m=1}^N\sum_{n=1}^C \frac{\partial L(t)}{\partial G_{m, n}} \frac{\partial G_{m, n}}{\partial V_{i, j}}
+\end{equation}
+We know that 
+\begin{equation}
+    G(t)_{m, n} = \sum_{k=1}^M S(t)_{m, k}V_{k, n}
+\end{equation}
+and therefore
+\begin{equation}
+    \frac{\partial G_{m, n}}{\partial V_{i, j}} = \mathbf{1}(n = j)S(t)_{m, i}
+\end{equation}
+Thus, the gradient with respect to $V$ is 
+\begin{align}
+    \frac{\partial L(t)}{\partial V_{i, j}} 
+    &= \sum_{m=1}^N\sum_{n=1}^C \frac{\partial L(t)}{\partial G_{m, n}} \frac{\partial G_{m, n}}{\partial V_{i, j}} \\
+    &= \sum_{m=1}^N\sum_{n=1}^C (\hat{Y}(t)_{m, n} - Y(t)_{m, n}) \mathbf{1}(n = j)S(t)_{m, i} \\
+    &= \sum_{m=1}^N (\hat{Y}(t)_{m, j} - Y(t)_{m, j}) S(t)_{m, i} \\
+    &= \sum_{m=1}^N S(t)_{m, i}(\hat{Y}(t)_{m, j} - Y(t)_{m, j}) 
+\end{align}
+Thus 
+\begin{equation}
+    \frac{\partial L(t)}{\partial V} = S(t)^\top(\hat{Y}(t) - Y(t))
+\end{equation}
+The gradient with respect to $W$ is
+\begin{align}
+    \frac{\partial L(t)}{\partial W} 
+    &= \sum_{k=1}^t 
+    \frac{\partial L(t)}{\partial S(t)} 
+    \frac{\partial S(t)}{\partial S(k)}
+    \frac{\partial S(k)}{\partial W} \\
+    &= \sum_{k=1}^t 
+    \frac{\partial L(t)}{\partial S(t)}
+    \frac{\partial S(t)}{\partial Z(t)}
+    \frac{\partial Z(t)}{\partial S(k)}
+    \frac{\partial Z(k)}{\partial W}
+\end{align}
+There are a few terms we must first handle. First,
+\begin{equation}
+    \frac{\partial S(t)_{m, n}}{\partial Z(t)_{i, j}} = \mathbf{1}(m=i, n=j)(1 - S(t)_{i, j}^2)
+\end{equation}
+Then 
+\begin{equation}
+    \frac{\partial L(t)}{\partial S(t)} = \frac{\partial L(t)}{\partial G(t)}V^\top = (\hat{Y}(t) - Y(t))V^\top
+\end{equation}
+and then 
+\begin{align}
+    \frac{\partial L(t)}{\partial Z(t)_{i, j}} 
+    &= \sum_{m=1}^N\sum_{n=1}^M
+    \frac{\partial L(t)}{\partial S(t)_{m, n}}
+    \frac{\partial S(t)_{m, n}}{\partial Z(t)_{i, j}} \\
+    &= \sum_{m=1}^N\sum_{n=1}^M
+    \frac{\partial L(t)}{\partial S(t)_{m, n}}
+    \mathbf{1}(m=i, n=j)(1 - S(t)_{i, j}^2) \\
+    &= \frac{\partial L(t)}{\partial S(t)_{i, j}}
+    (1 - S(t)_{i, j}^2)
+\end{align}
+Thus 
+\begin{equation} \label{eq-lToZ}
+    \frac{\partial L(t)}{\partial Z(t)} 
+    = \frac{\partial L(t)}{\partial S(t)} \circ (I - S(t) \circ S(t))
+\end{equation}
+where $\circ$ represents element-wise multiplication. Now let's look at $\frac{\partial Z(t)}{\partial S(t-1)}$:
+\begin{equation} \label{eq-lToS}
+    \frac{\partial L(t)}{\partial S(t-1)} = \frac{\partial L(t)}{\partial Z(t)}\frac{\partial Z(t)}{\partial S(t-1)} = \frac{\partial L(t)}{\partial Z(t)}W^\top
+\end{equation}
+Going back to the gradient with respect to $W$, we have
+\begin{align}
+    \frac{\partial L(t)}{\partial W} 
+    &= \sum_{k=1}^t 
+    \frac{\partial L(t)}{\partial S(t)}
+    \frac{\partial S(t)}{\partial Z(t)}
+    \frac{\partial Z(t)}{\partial S(k)}
+    \frac{\partial Z(k)}{\partial W} \\
+    &= \sum_{k=1}^t 
+    \frac{\partial L(t)}{\partial S(t)}
+    \frac{\partial S(t)}{\partial Z(t)}
+    \frac{\partial Z(t)}{\partial S(t-1)}
+    \frac{\partial S(t-1)}{\partial Z(t-1)}
+    \cdots
+    \frac{\partial S(k)}{\partial Z(k)}
+    \frac{\partial Z(k)}{\partial W}
+\end{align}
+in which the multiplication process involves mainly Eq. \eqref{eq-lToZ} and Eq. \eqref{eq-lToS}. As there are element-wise multiplication involved, we cannot simply the computation into a chain of products. After we have computed $\frac{\partial L(t)}{\partial Z(k)}$, we can compute:
+\begin{equation}
+   \frac{\partial L(t)}{\partial Z(k)} \frac{\partial Z(k)}{\partial W} = S(k-1)^\top\frac{\partial L(t)}{\partial Z(k)}
+\end{equation}
+Similar to $W$, the gradient with respect to $U$ is
+\begin{align}
+    \frac{\partial L(t)}{\partial U} 
+    &= \sum_{k=1}^t 
+    \frac{\partial L(t)}{\partial S(t)}
+    \frac{\partial S(t)}{\partial Z(t)}
+    \frac{\partial Z(t)}{\partial S(k)}
+    \frac{\partial Z(k)}{\partial U}
+\end{align}
+and after we have computed $\frac{\partial L(t)}{\partial Z(k)}$, we can compute:
+\begin{equation}
+   \frac{\partial L(t)}{\partial Z(k)} \frac{\partial Z(k)}{\partial U} = X(k)^\top\frac{\partial L(t)}{\partial Z(k)}
+\end{equation}
 \end{document}
