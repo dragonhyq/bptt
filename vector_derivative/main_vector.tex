@@ -1,0 +1,154 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+
+\title{Vector Derivative For Back Propagation}
+\author{Yongqiang Huang}
+\date{December 2019}
+
+\begin{document}
+
+\maketitle
+
+\section{Jacobian and gradient}
+In this article we go through the basic vector calculus we have needed \emph{so far} for computing back propagation for neural networks. First we need to familiarize ourselves with the concept of Jacobian, which is a container that holds derivative of each output variable with respect to each input variable. To be specific, let a function be
+\begin{equation}
+    y = f(x)
+\end{equation}
+where $f: \mathbb{R}^N \rightarrow \mathbb{R}^M$, then the Jacobian matrix is defined as 
+\begin{equation}
+    J = \begin{bmatrix}
+    \frac{\partial y_1}{\partial x_1}& \frac{\partial y_1}{\partial x_2}& \cdots & \frac{\partial y_1}{\partial x_N} \\
+    \frac{\partial y_2}{\partial x_1}& \frac{\partial y_2}{\partial x_2}& \cdots & \frac{\partial y_2}{\partial x_N} \\
+    \vdots & \vdots & \vdots & \vdots \\
+    \frac{\partial y_M}{\partial x_1}& \frac{\partial y_M}{\partial x_2}& \cdots & \frac{\partial y_M}{\partial x_N} \\
+    \end{bmatrix}
+\end{equation}
+In this case, the dimension of $J$ is $M\times N$. If $f: \mathbb{R}^N \rightarrow \mathbb{R}$, then $J$ has dimension $1\times N$: only one $y$ corresponding to $N$ $x_i$'s. If $f: \mathbb{R} \rightarrow \mathbb{R}^M$, then $J$ has dimension $M\times 1$. Basically
+\begin{equation}
+    J_{i, j} = \frac{\partial f(x)_i}{\partial x_j}
+\end{equation}
+Gradient is one level down from Jacobian. We usually consider gradient $\nabla_{x}f(x)$ as the derivative of a function $f: \mathbb{R}^N \rightarrow \mathbb{R}$. The gradient matches in dimension the input $x$. If $x$ has dimension $N\times 1$, $\nabla_{x}f(x)$ has dimension $N\times 1$. If $x$ has dimension $N\times M$, $\nabla_{x}f(x)$ has dimension $N\times M$. 
+In neural networks, we define a loss function $L$ which is a scalar, and we compute the gradient of $L$ with respect to the weight matrices, $\frac{\partial L}{\partial W}$. Usually $W$ is a matrix, say of dimension $M\times N$, and the dimension of the gradient would be $M\times N$. 
+
+\section{$y = Wx$}
+Let's look at a simple neural network
+\begin{equation}
+    y = Wx
+\end{equation}
+for which the dimensions are
+\begin{align}
+    y &: M \times 1 \\
+    x &: N \times 1 \\
+    W &: M \times N
+\end{align}
+Suppose some loss function $L$ is defined which is a function of $y$ and somehow you have computed the gradient with respect to $y$:
+\begin{equation}
+    \nabla_yL = \frac{\partial L}{\partial y} = \delta
+\end{equation}
+Note that here we use $\nabla_yL$ and $\frac{\partial L}{\partial y}$ interchangably, which may not be very rigorous. The dimension of $\frac{\partial L}{\partial y}$ should be the same as that of $y$: $M \times 1$. Now here are two questions: given $\delta$, what is $\frac{\partial L}{\partial x}$ and what is $\frac{\partial L}{\partial W}$? We use chain rule to solve them:
+\begin{equation}
+    \frac{\partial L}{\partial x} = \frac{\partial L}{\partial y}\frac{\partial y}{\partial x}
+\end{equation}
+and what is $\frac{\partial y}{\partial x}$? 
+
+$\frac{\partial y}{\partial x}$ is a Jacobian matrix. To know what its elements are, we need to take a closer look at how $x$ becomes $y$:
+\begin{equation} \label{eq-xy}
+    y_i = \sum_{k=1}^NW_{i, k}x_k
+\end{equation}
+What you want to notice that row $i$ in $y$, or actually $y_i$ only has relations with row $i$ in $W$, and has nothing to do with any other row in $W$. Based on Eq. \eqref{eq-xy}
+\begin{equation}
+    \frac{\partial y_i}{\partial x_j} = W_{i, j}
+\end{equation}
+Which written in vector form is
+\begin{equation}
+    \frac{\partial y}{\partial x} = W
+\end{equation}
+Notice we always look at the element of a gradient and then recover its vector form. Although a vector form seem neat, we may not need them everywhere, so it is not necessary that you always recover the vector form. Now let's go back to the gradient with respect to $x$: $\frac{\partial L}{\partial x}$. We already know the shape of the gradient. To determine it, we really only need its elements:
+\begin{equation}
+    \frac{\partial L}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i}
+\end{equation}
+Pay attention to this step. $L$ is a function of $\{y_1, y_2, \dots, y_N\}$, so the gradient with respect to $x_i$ must go through every $y_k$. Let's get back to the formula
+\begin{align}
+    \frac{\partial L}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}W_{k, i}
+\end{align}
+which is an inner product between $\delta$ and the $i$-th column in $W$. Its vector form (we actually need the vector form this time) is:
+\begin{equation}
+    \frac{\partial L}{\partial x} 
+    = W^\top\frac{\partial L}{\partial y} = W^\top\delta
+\end{equation}
+If we look at the dimension we get: $(N\times M) \times (M \times 1)$ which is compatible with $\frac{\partial L}{\partial x}$. 
+Now let's do something a little bit more difficult:
+\begin{equation}
+    \frac{\partial L}{\partial W} = \frac{\partial L}{\partial y}\frac{\partial y}{\partial W}
+\end{equation}
+$\frac{\partial y}{\partial W}$ is, believe it or not, a Jacobian, which has a dimension of $M\times(M\times N)$. This is the case when we do \emph{not} want to recover its vector form. We only need its elements: $\frac{\partial y}{\partial W_{i, j}}$. Again:
+\begin{equation}
+    y_i = \sum_{k=1}^NW_{i, k}x_k
+\end{equation}
+and therefore
+\begin{equation}
+    \frac{\partial y_k}{\partial W_{i, j}} = \mathbf{1}(k=i)x_j
+\end{equation}
+Thus
+\begin{align}
+    \frac{\partial L}{\partial W_{i, j}} 
+    &= \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial W_{i, j}} \\
+    &= \sum_{k=1}^N\frac{\partial L}{\partial y_k}\mathbf{1}(k=i)x_j \\
+    &= \frac{\partial L}{\partial y_i}x_j
+\end{align}
+The restored vector form is
+\begin{equation}
+    \frac{\partial L}{\partial W} = \delta x^\top 
+\end{equation}
+
+
+\section{$y = xW$}
+We can consider the same network but formulate it but write it differently:
+\begin{equation}
+    y = xW
+\end{equation}
+for which the dimensions are:
+\begin{align}
+    y &: 1 \times M \\
+    x &: 1 \times N \\
+    W &: N \times M
+\end{align}
+Assume, again, that you have computed $\frac{\partial L}{\partial y} = \delta$ which has dimension $1\times M$. Again, we want to compute $\frac{\partial L}{\partial x}$, $\frac{\partial L}{\partial W}$, and to do that we need two immediate partial derivatives: $\frac{\partial y_k}{\partial x_i}$ and $\frac{\partial y_k}{\partial W_{i, j}}$. First we need to know how to get $y$ using $x$:
+\begin{equation}
+    y_k = \sum_{i = 1}^N x_iW_{i, k}
+\end{equation}
+Thus 
+\begin{equation}
+    \frac{\partial y_k}{\partial x_i} = W_{i, k} 
+\end{equation}
+which restored to vector form is
+\begin{equation}
+    \frac{\partial y}{\partial x} = W^\top
+\end{equation}
+and
+\begin{align}
+   \frac{\partial L}{\partial x_i} 
+   &= \sum_{k=1}^M\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i} = \sum_{k=1}^M\frac{\partial L}{\partial y_k}W_{i, k} 
+\end{align}
+which restored to vector form is
+\begin{equation}
+    \frac{\partial L}{\partial x} = \delta W^\top
+\end{equation}
+Next we work on $\frac{\partial L}{\partial W}$. First, 
+\begin{equation}
+    \frac{\partial y_k}{\partial W_{i, j}} = \mathbf{1}(k=j)x_i
+\end{equation}
+Then
+\begin{align}
+    \frac{\partial L}{\partial W_{i, j}} 
+    &= \sum_{k=1}^M\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial W_{i, j}} \\ 
+    &= \sum_{k=1}^M\frac{\partial L}{\partial y_k}\mathbf{1}(k=j)x_i \\
+    &= \frac{\partial L}{\partial y_j}x_i
+\end{align}
+which restored to vector form is
+\begin{equation}
+    \frac{\partial L}{\partial W} = x^\top\delta
+\end{equation}
+\end{document}
