@@ -6,6 +6,6 @@
 [A brief tutorial on vector derivative](vector_derivative/vectorDerivative.pdf) 
 
 To do:
-- a summary of tools to use for deriving vector form back progapation (ongoing)
+- finish the Y=XW batch form for vector derivative article
 - code
 - derivation for LSTM
