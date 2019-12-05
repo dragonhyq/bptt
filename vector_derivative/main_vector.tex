@@ -47,17 +47,15 @@ Suppose some loss function $L$ is defined which is a function of $y$ and somehow
 \begin{equation}
     \nabla_yL = \frac{\partial L}{\partial y} = \delta
 \end{equation}
-Note that here we use $\nabla_yL$ and $\frac{\partial L}{\partial y}$ interchangably, which may not be very rigorous. The dimension of $\frac{\partial L}{\partial y}$ should be the same as that of $y$: $M \times 1$. Now here are two questions: given $\delta$, what is $\frac{\partial L}{\partial x}$ and what is $\frac{\partial L}{\partial W}$? We use chain rule to solve them:
+Note that here we use $\nabla_yL$ and $\frac{\partial L}{\partial y}$ interchangably, which may not be very rigorous. The dimension of $\frac{\partial L}{\partial y}$ should be the same as that of $y$: $M \times 1$. Now here are two questions: given $\delta$, what is $\frac{\partial L}{\partial x}$ and what is $\frac{\partial L}{\partial W}$? We use chain rule to solve them. First we look at $\frac{\partial L}{\partial x}$ which is computed by
 \begin{equation}
-    \frac{\partial L}{\partial x} = \frac{\partial L}{\partial y}\frac{\partial y}{\partial x}
+    \frac{\partial L}{\partial x} = \frac{\partial L}{\partial y}\frac{\partial y}{\partial x},
 \end{equation}
-and what is $\frac{\partial y}{\partial x}$? 
-
-$\frac{\partial y}{\partial x}$ is a Jacobian matrix. To know what its elements are, we need to take a closer look at how $x$ becomes $y$:
+and what is $\frac{\partial y}{\partial x}$? $\frac{\partial y}{\partial x}$ is a Jacobian matrix. To know what its elements are, we need to take a closer look at how $y$ is calculated from $x$:
 \begin{equation} \label{eq-xy}
     y_i = \sum_{k=1}^NW_{i, k}x_k
 \end{equation}
-What you want to notice that row $i$ in $y$, or actually $y_i$ only has relations with row $i$ in $W$, and has nothing to do with any other row in $W$. Based on Eq. \eqref{eq-xy}
+What you want to notice that row $i$ in $y$, or actually $y_i$ only has relations with row $i$ in $W$, and has nothing to do with any other row in $W$. Thus, 
 \begin{equation}
     \frac{\partial y_i}{\partial x_j} = W_{i, j}
 \end{equation}
@@ -65,27 +63,27 @@ Which written in vector form is
 \begin{equation}
     \frac{\partial y}{\partial x} = W
 \end{equation}
-Notice we always look at the element of a gradient and then recover its vector form. Although a vector form seem neat, we may not need them everywhere, so it is not necessary that you always recover the vector form. Now let's go back to the gradient with respect to $x$: $\frac{\partial L}{\partial x}$. We already know the shape of the gradient. To determine it, we really only need its elements:
+Notice that we always \emph{first} look at the element of a gradient and \emph{then} recover its vector form. The vector form is neat, but we may not need it for \emph{every} step of the chain rule. We do need it for certain steps, i.e. for the inbound and outbound derivative for any operation. Now let's go back to the gradient with respect to $x$: $\frac{\partial L}{\partial x}$. We already know the shape of $\frac{\partial L}{\partial x}$, which is $N \times 1$. To determine its entirety, we really only need its elements:
 \begin{equation}
-    \frac{\partial L}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i}
+    \frac{\partial L}{\partial x_i} = \sum_{k=1}^M\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i}
 \end{equation}
-Pay attention to this step. $L$ is a function of $\{y_1, y_2, \dots, y_N\}$, so the gradient with respect to $x_i$ must go through every $y_k$. Let's get back to the formula
+Pay attention to this step. $L$ is a function of $\{y_1, y_2, \dots, y_M\}$, so the gradient with respect to $x_i$ must go through every $y_k$. Let's get back to the formula
 \begin{align}
-    \frac{\partial L}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i} = \sum_{k=1}^N\frac{\partial L}{\partial y_k}W_{k, i}
+    \frac{\partial L}{\partial x_i} = \sum_{k=1}^M\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial x_i} = \sum_{k=1}^M\frac{\partial L}{\partial y_k}W_{k, i}
 \end{align}
-which is an inner product between $\delta$ and the $i$-th column in $W$. Its vector form (we actually need the vector form this time) is:
+which is an inner product between $\delta$ and the $i$-th column of $W$. Its vector form (we actually need the vector form this time) is:
 \begin{equation}
     \frac{\partial L}{\partial x} 
     = W^\top\frac{\partial L}{\partial y} = W^\top\delta
 \end{equation}
-If we look at the dimension we get: $(N\times M) \times (M \times 1)$ which is compatible with $\frac{\partial L}{\partial x}$. 
-Now let's do something a little bit more difficult:
+If we look at the dimension, we get: $(N\times M) \times (M \times 1)=N \times 1$ which is compatible with $\frac{\partial L}{\partial x}$. 
+Now let's compute $\frac{\partial L}{\partial W}$, which is a little bit more difficult:
 \begin{equation}
     \frac{\partial L}{\partial W} = \frac{\partial L}{\partial y}\frac{\partial y}{\partial W}
 \end{equation}
-$\frac{\partial y}{\partial W}$ is, believe it or not, a Jacobian, which has a dimension of $M\times(M\times N)$. This is the case when we do \emph{not} want to recover its vector form. We only need its elements: $\frac{\partial y}{\partial W_{i, j}}$. Again:
+$\frac{\partial y}{\partial W}$ is, believe it or not, a Jacobian, which has a dimension of $M\times(M\times N)$. This is the case when we do \emph{not} want to recover its vector form: it's a tensor, and if we simply expand it, we might make mistakes easily. Actually, we don't need to expand it, we just need to know its elements: $\frac{\partial y}{\partial W_{i, j}}$. Again:
 \begin{equation}
-    y_i = \sum_{k=1}^NW_{i, k}x_k
+    y_i = \sum_{j=1}^NW_{i, j}x_j
 \end{equation}
 and therefore
 \begin{equation}
@@ -94,18 +92,18 @@ and therefore
 Thus
 \begin{align}
     \frac{\partial L}{\partial W_{i, j}} 
-    &= \sum_{k=1}^N\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial W_{i, j}} \\
-    &= \sum_{k=1}^N\frac{\partial L}{\partial y_k}\mathbf{1}(k=i)x_j \\
+    &= \sum_{k=1}^M\frac{\partial L}{\partial y_k}\frac{\partial y_k}{\partial W_{i, j}} \\
+    &= \sum_{k=1}^M\frac{\partial L}{\partial y_k}\mathbf{1}(k=i)x_j \\
     &= \frac{\partial L}{\partial y_i}x_j
 \end{align}
 The restored vector form is
 \begin{equation}
     \frac{\partial L}{\partial W} = \delta x^\top 
 \end{equation}
-
+Let's check the dimension: $(M\times 1) \times (1 \times N) = M \times N$, compatible with $W$. 
 
 \section{$y = xW$}
-We can consider the same network but formulate it but write it differently:
+We can consider the same network but formulate it a little bit differently:
 \begin{equation}
     y = xW
 \end{equation}
@@ -115,7 +113,7 @@ for which the dimensions are:
     x &: 1 \times N \\
     W &: N \times M
 \end{align}
-Assume, again, that you have computed $\frac{\partial L}{\partial y} = \delta$ which has dimension $1\times M$. Again, we want to compute $\frac{\partial L}{\partial x}$, $\frac{\partial L}{\partial W}$, and to do that we need two immediate partial derivatives: $\frac{\partial y_k}{\partial x_i}$ and $\frac{\partial y_k}{\partial W_{i, j}}$. First we need to know how to get $y$ using $x$:
+All we do is transpose the input $x$ really, and $W$ and $y$ accordingly. Assume, again, that you have computed $\frac{\partial L}{\partial y} = \delta$ which now has dimension $1\times M$. Again, we want to compute $\frac{\partial L}{\partial x}$, $\frac{\partial L}{\partial W}$, and we will follow almost the same procedure as we do for $x$ being a column vector. We need two immediate partial derivatives: $\frac{\partial y_k}{\partial x_i}$ and $\frac{\partial y_k}{\partial W_{i, j}}$. Again, we need to know how $y$ is computed from $x$:
 \begin{equation}
     y_k = \sum_{i = 1}^N x_iW_{i, k}
 \end{equation}
@@ -136,7 +134,9 @@ which restored to vector form is
 \begin{equation}
     \frac{\partial L}{\partial x} = \delta W^\top
 \end{equation}
-Next we work on $\frac{\partial L}{\partial W}$. First, 
+Let's check the dimension: $(1\times M) \times (M \times N) = 1 \times N$, compatible with $x$.
+
+Next we compute $\frac{\partial L}{\partial W}$. First, 
 \begin{equation}
     \frac{\partial y_k}{\partial W_{i, j}} = \mathbf{1}(k=j)x_i
 \end{equation}
@@ -151,4 +151,8 @@ which restored to vector form is
 \begin{equation}
     \frac{\partial L}{\partial W} = x^\top\delta
 \end{equation}
+The dimension is $(N\times 1) \times (1 \times M) = N \times M$, which is compatible with $W$.
+
+\section{Y = XW}
+
 \end{document}
