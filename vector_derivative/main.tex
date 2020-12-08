@@ -154,5 +154,69 @@ which restored to vector form is
 The dimension is $(N\times 1) \times (1 \times M) = N \times M$, which is compatible with $W$.
 
 \section{Y = XW}
+In a realistic scenario, when $x$ is of dimension $1 \times N$, it represents a single sample that has $N$ dimensions. If, instead of a single sample, we now have multiple samples, then our $X$ (upper case now) would have dimension $n \times N$, where each row represents a sample, and there are $n$ samples in total. In this case, the output $Y$ (also upper case) would have dimension $n * M$ accordingly.
 
+Samples in $X$ are independent of one another, and therefore we could view $X$ and $Y$ as simply collections of samples: 
+\begin{align}
+    X &= [x_1, x_2, \dots, x_n]^T \\
+    Y &= [y_1, y_2, \dots, y_n]^T
+\end{align}
+where $x_i$ is of shape $1 \times N$, and $y_j$ is of shape $1 \times M$, respectively, as in the previous section. 
+
+Samples are processed independently of each other, and so are their corresponding gradients. When we obtain $\frac{\partial L}{\partial Y}$, we really are obtaining a batch of $n$ separate derivatives, each of which having the same shape $1 \times M$, that is 
+\begin{equation}
+    \frac{\partial L}{\partial Y} = \left[\frac{\partial L}{\partial y_1}, \frac{\partial L}{\partial y_2}, \dots, \frac{\partial L}{\partial y_n}\right]^\top = \Delta = [\delta_1, \delta_2, \dots, \delta_n]^\top
+\end{equation}
+
+We already know from the previous section that, in the one-sample case, 
+\begin{equation}
+    \frac{\partial L}{\partial x} = \delta W^\top,
+\end{equation}
+and naturally, in the batch case, since each sample works independently, we should have 
+\begin{equation}
+    \frac{\partial L}{\partial x_i} = \delta_i W^\top,
+\end{equation}
+If we follow the dimension of $X$ here, which is $X=[x_1, x_2, \dots, x_n]^T$, then we should also have 
+\begin{align}
+    \frac{\partial L}{\partial X} &= \left[\frac{\partial L}{\partial x_1}, \frac{\partial L}{\partial x_2}, \dots, \frac{\partial L}{\partial x_n}\right]^\top \\ 
+    &= [\delta_1 W^\top, \delta_2 W^\top, \dots, \delta_n W^\top]^\top \\
+    &= [\delta_1, \delta_2, \dots, \delta_n]^\top W^\top \\
+    &= \Delta W^\top
+\end{align}
+The dimension checks out: $(n \times M) \times (M \times N) = n \times N$.
+
+$\frac{\partial L}{\partial W}$ does not extend from the previous section as naturally. It is tempting to simply take the one-sample case:
+\begin{equation}
+    \frac{\partial L}{\partial W} = x^\top\delta
+\end{equation}
+and extend it to the batch case:
+\begin{equation}
+    \frac{\partial L}{\partial W} = X^\top\Delta,
+\end{equation}
+and check the dimension which does work. However, we have not justified making that extension. What should $\frac{\partial L}{\partial W}$ be when there are multiple samples? 
+
+Since samples are processed separately, We are still justified to look at each sample, for which 
+\begin{equation}
+    \frac{\partial L}{\partial W_i} = x_i^\top\delta_i, \quad i = [1, 2, \dots, n]
+\end{equation}
+we add a subscript $i$ to $W$ to indicate that it corresponds to the $i$-th sample. Thus, we actually have $n$ separate derivatives of $L$ with respect to $W$, each corresponding to one sample: $\{\frac{\partial L}{\partial W_1}, \frac{\partial L}{\partial W_2}, \dots, \frac{\partial L}{\partial W_n}\}$. How do we obtain the ultimate $\frac{\partial L}{\partial W}$ using $\{\frac{\partial L}{\partial W_i}\}$? 
+
+We need to define a reduction operation to be applied to $\{\frac{\partial L}{\partial W_i}\}$. Do we want to add them together, or do we want to compute their average? (I think) it depends on how we compute the loss. If we compute the loss by summing the loss from all samples, then we want to average $\{\frac{\partial L}{\partial W_i}\}$ to get $\frac{\partial L}{\partial W}$. Alternatively, if we compute loss by averaging, then we should compute $\frac{\partial L}{\partial W}$ using summation. 
+
+If we assume summation, then, 
+\begin{align}
+    \frac{\partial L}{\partial W} &= \sum_i \frac{\partial L}{\partial W_i} \\
+    &= \sum_i x_i^\top\delta_i \\
+    &= [x_1^\top, x_2^\top, \dots, x_n^\top]
+       \begin{bmatrix}
+       \delta_1 \\
+       \delta_2 \\
+       \vdots \\
+       \delta_n
+       \end{bmatrix} \\
+    &= X^\top\Delta
+\end{align}
+Surprisingly, we arrive at the same conclusion as what we get previously, but this time, our result is justified. 
+
+If we assume average, we simply need to divide the above result by $n$. 
 \end{document}
